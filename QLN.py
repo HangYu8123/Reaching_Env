@@ -21,14 +21,20 @@ import Estimation as Est
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
+import math
+
 q_learning_table_path = 'q_learning_oracle.pkl' 
 
 env = Env.Stacking()
 # episodes = 1000
 # times = 5
 #env = Env.Fixing()
+epsilon_max = 1
+epsilon_min = 0.1
+eps_decay = 3000
 
-
+weight_by_frame = lambda frame_idx: epsilon_min + (epsilon_max - epsilon_min) * math.exp(
+                -1. * frame_idx / eps_decay)
 
 def test(model = 1, episodes= 1000, times  = 1):
     
@@ -64,7 +70,9 @@ def test(model = 1, episodes= 1000, times  = 1):
             while(1):
                 cnt += 1
                 feedback = 0
-                prob = Qagent.action_prob(state) # Qagent.action_prob(state) #+
+                weight = weight_by_frame(cnt)
+                prob = Qagent.action_prob(state) #+ np.asarray(Pagent.action_prob(state)) * weight
+                
                 
                 # if cnt % 6 ==0 and sof > 0:
                 #     sof -= 1
@@ -72,8 +80,8 @@ def test(model = 1, episodes= 1000, times  = 1):
                 #     feedback = 1
                 #advice
                 
-                action = np.random.choice(np.flatnonzero(prob == prob.max()))
-                #action = np.random.choice([i for i in range(env.action_space)],p = prob/sum(prob))
+                #action = np.random.choice(np.flatnonzero(prob == prob.max()))
+                action = np.random.choice([i for i in range(env.action_space)],p = prob/sum(prob))
     
                         
     
@@ -82,30 +90,29 @@ def test(model = 1, episodes= 1000, times  = 1):
                 
                 
                 
-                #reward += Eagent.estimation(next_state) - Eagent.estimation(state)
-                # if cnt % 3 == 0 and sof > 0:
+                # reward += Eagent.estimation(next_state) - Eagent.estimation(state)
+                # if cnt % 10 == 0 and sof > 0:
                 #     sof -= 1
                 #     Eagent.learning(0, env.estimation(state),state,next_state)
                 #     Eagent.learning(0, env.estimation(next_state),next_state,next_state)
-                #Estimation
+                # #Estimation
             
                             
-                if cnt % 5 ==0 and sof > 0:
-                    sof -= 1
-                    Qagent.learning(action, reward, state,next_state)
-                    # if action == env.perfect_action(state):
-                    #     Qagent.learning(action, reward + 10, state,next_state)
-                    # else:
-                    #     Qagent.learning(action, reward - 10, state,next_state)
-                #evaluation 
+                # if cnt % 5 ==0 and sof > 0:
+                #     sof -= 1
+                #     if  action == env.perfect_action(state):
+                #         feedback = 1
+                #     else:
+                #         feedback = -1
+                # #evaluation 
                 
-                # Qagent.learning(action,reward,state,next_state)
+                Qagent.learning(action,reward/5,state,next_state)
     
-                #if feedback !=0 and sof > 0:
-                    #feedback_num -= 1
-                    #print(action, feedback,state,next_state)
-                    
-                # F learning
+                # if feedback !=0 and sof > 0:
+                #     #feedback_num -= 1
+                #     #print(action, feedback,state,next_state)
+                #     Pagent.learning(action, feedback,state,next_state)
+                # # F learning
                 
                 
                 state = next_state
@@ -119,7 +126,7 @@ def test(model = 1, episodes= 1000, times  = 1):
     return total_reward
         
         
-length = 200
+length = 500
 times = 10
 M=[0 for i in range(length)]
 S=[0 for i in range(length)]
@@ -129,9 +136,9 @@ R=[0 for i in range(length)]
 for i in range(times):
     print('\n',i,"-th Trial")
     M = np.sum([test(1, length, times),M], axis=0)
-    S = np.sum([test(5, length, times),S], axis=0)
-    N = np.sum([test(10, length, times),N], axis=0)
-    R = np.sum([test(100, length, times),R], axis=0)
+    # S = np.sum([test(5, length, times),S], axis=0)
+    # N = np.sum([test(10, length, times),N], axis=0)
+    # R = np.sum([test(100, length, times),R], axis=0)
 
 
 
@@ -141,38 +148,38 @@ x=[i+1 for i in range(length)]
 plt.xlabel("Episodes")
 plt.ylabel("Rewards")
 plt.plot(x,M/times,color='green',label='M')
-plt.plot(x,S/times,color='red',label='S')
-plt.plot(x,N/times,color='yellow',label='N')
-plt.plot(x,R/times,color='pink',label='R')
+# plt.plot(x,S/times,color='red',label='S')
+# plt.plot(x,N/times,color='yellow',label='N')
+# plt.plot(x,R/times,color='pink',label='R')
 
 plt.legend()
 
 
 res=M/times
-f = open('DQN+TAMER_1.txt', 'w')  
+f = open('Q_Learning.txt', 'w')  
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
 f.close() 
 
 
-res=S/times
-f = open('DQN+TAMER_5.txt', 'w')   
-for r in res:  
-    f.write(str(r))  
-    f.write('\n')  
-f.close() 
+# res=S/times
+# f = open('rf_5.txt', 'w')    
+# for r in res:  
+#     f.write(str(r))  
+#     f.write('\n')  
+# f.close() 
 
-res=N/times
-f = open('DQN+TAMER_10.txt', 'w')   
-for r in res:  
-    f.write(str(r))  
-    f.write('\n')  
-f.close() 
+# res=N/times
+# f = open('rf_10.txt', 'w')    
+# for r in res:  
+#     f.write(str(r))  
+#     f.write('\n')  
+# f.close() 
 
-res=R/times
-f = open('DQN+TAMER_100.txt', 'w')   
-for r in res:  
-    f.write(str(r))  
-    f.write('\n')  
-f.close() 
+# res=R/times
+# f = open('rf_100.txt', 'w')    
+# for r in res:  
+#     f.write(str(r))  
+#     f.write('\n')  
+# f.close() 

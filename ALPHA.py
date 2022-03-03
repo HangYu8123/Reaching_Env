@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec 14 03:25:58 2020
 
-@author: Hang Yu
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  3 19:27:14 2020
 
 @author: Hang Yu
 """
@@ -21,14 +14,20 @@ import Estimation as Est
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
+import math
+
 q_learning_table_path = 'q_learning_oracle.pkl' 
 
 env = Env.Stacking()
 # episodes = 1000
 # times = 5
 #env = Env.Fixing()
+epsilon_max = 1
+epsilon_min = 0.1
+eps_decay = 3000
 
-
+weight_by_frame = lambda frame_idx: epsilon_min + (epsilon_max - epsilon_min) * math.exp(
+                -1. * frame_idx / eps_decay)
 
 def test(model = 1, episodes= 1000, times  = 1):
     
@@ -39,41 +38,43 @@ def test(model = 1, episodes= 1000, times  = 1):
         #print(t)
         Qagent = QL.QLAgent(env.action_space,epsilon = 0.2, mini_epsilon = 0.01, decay = 0.999)
         Pagent = PS.PSAgent(env.action_space)
-        Eagent = Est.PSAgent(env.action_space)
-        
+
         sof = 100 * model
         demo_time = 1 * model
         
-        # for i in range(demo_time):
-        #     state = env.reset()
-        #     while(1 and sof > 0):
-        #         sof -= 1
-        #         action = env.perfect_action(state)
-        #         next_state, reward, is_done = env.step(action)
-        #         Qagent.learning(action,reward,state,next_state)
-        #         Pagent.learning(action, 1, state, next_state)
-        #         state = next_state
-        #         if is_done:
-        #             break
+        for i in range(demo_time):
+            state = env.reset()
+            while(1 and sof > 0):
+                sof -= 1
+                action = env.perfect_action(state)
+                next_state, reward, is_done = env.step(action)
+                Qagent.learning(action,reward,state,next_state)
+                Pagent.learning(action, 1, state, next_state)
+                state = next_state
+                if is_done:
+                    break
         
         for epsd in range(episodes):
+            state = env.reset()
             #total_reward.append(0)
             #print(epsd)
-            state = env.reset()
             start_f = cnt
             while(1):
                 cnt += 1
                 feedback = 0
-                prob = Qagent.action_prob(state) # Qagent.action_prob(state) #+
+                weight = weight_by_frame(cnt)
+                prob = Qagent.action_prob(state) + weight *np.asarray(Pagent.action_prob(state)) #* weight 
+                                                     
                 
-                # if cnt % 6 ==0 and sof > 0:
-                #     sof -= 1
-                #     action = env.perfect_action(state)
-                #     feedback = 1
+                
+                if cnt % 10 ==0 and sof > 0:
+                    sof -= 1
+                    action = env.perfect_action(state)
+                    feedback = 1
                 #advice
                 
-                action = np.random.choice(np.flatnonzero(prob == prob.max()))
-                #action = np.random.choice([i for i in range(env.action_space)],p = prob/sum(prob))
+                #action = np.random.choice(np.flatnonzero(prob == prob.max()))
+                action = np.random.choice([i for i in range(env.action_space)],p = prob/sum(prob))
     
                         
     
@@ -82,29 +83,21 @@ def test(model = 1, episodes= 1000, times  = 1):
                 
                 
                 
-                #reward += Eagent.estimation(next_state) - Eagent.estimation(state)
-                # if cnt % 3 == 0 and sof > 0:
-                #     sof -= 1
-                #     Eagent.learning(0, env.estimation(state),state,next_state)
-                #     Eagent.learning(0, env.estimation(next_state),next_state,next_state)
-                #Estimation
-            
+
                             
                 if cnt % 5 ==0 and sof > 0:
                     sof -= 1
-                    Qagent.learning(action, reward, state,next_state)
-                    # if action == env.perfect_action(state):
-                    #     Qagent.learning(action, reward + 10, state,next_state)
-                    # else:
-                    #     Qagent.learning(action, reward - 10, state,next_state)
+                    if  action == env.perfect_action(state):
+                        feedback = 1
+                    else:
+                        feedback = -1
                 #evaluation 
                 
-                # Qagent.learning(action,reward,state,next_state)
     
-                #if feedback !=0 and sof > 0:
+                if feedback !=0 and sof > 0:
                     #feedback_num -= 1
                     #print(action, feedback,state,next_state)
-                    
+                    Pagent.learning(action, feedback,state,next_state)
                 # F learning
                 
                 
@@ -129,9 +122,9 @@ R=[0 for i in range(length)]
 for i in range(times):
     print('\n',i,"-th Trial")
     M = np.sum([test(1, length, times),M], axis=0)
-    S = np.sum([test(5, length, times),S], axis=0)
-    N = np.sum([test(10, length, times),N], axis=0)
-    R = np.sum([test(100, length, times),R], axis=0)
+    S = np.sum([test(2, length, times),S], axis=0)
+    N = np.sum([test(5, length, times),N], axis=0)
+    R = np.sum([test(10, length, times),R], axis=0)
 
 
 
@@ -149,7 +142,7 @@ plt.legend()
 
 
 res=M/times
-f = open('DQN+TAMER_1.txt', 'w')  
+f = open('rf_1_NO.txt', 'w')  
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
@@ -157,21 +150,21 @@ f.close()
 
 
 res=S/times
-f = open('DQN+TAMER_5.txt', 'w')   
+f = open('rf_5_NO.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
 f.close() 
 
 res=N/times
-f = open('DQN+TAMER_10.txt', 'w')   
+f = open('rf_10_NO.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
 f.close() 
 
 res=R/times
-f = open('DQN+TAMER_100.txt', 'w')   
+f = open('rf_100_NO.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  

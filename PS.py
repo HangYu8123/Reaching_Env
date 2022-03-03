@@ -21,14 +21,20 @@ import Estimation as Est
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
+import math
+
 q_learning_table_path = 'q_learning_oracle.pkl' 
 
 env = Env.Stacking()
 # episodes = 1000
 # times = 5
 #env = Env.Fixing()
+epsilon_max = 1
+epsilon_min = 0.1
+eps_decay = 3000
 
-
+weight_by_frame = lambda frame_idx: epsilon_min + (epsilon_max - epsilon_min) * math.exp(
+                -1. * frame_idx / eps_decay)
 
 def test(model = 1, episodes= 1000, times  = 1):
     
@@ -64,13 +70,15 @@ def test(model = 1, episodes= 1000, times  = 1):
             while(1):
                 cnt += 1
                 feedback = 0
-                prob = Qagent.action_prob(state) # Qagent.action_prob(state) #+
+                weight = weight_by_frame(cnt)
+                prob = Qagent.action_prob(state) + Pagent.action_prob(state)
+                
                 
                 # if cnt % 6 ==0 and sof > 0:
                 #     sof -= 1
                 #     action = env.perfect_action(state)
                 #     feedback = 1
-                #advice
+                # #advice
                 
                 action = np.random.choice(np.flatnonzero(prob == prob.max()))
                 #action = np.random.choice([i for i in range(env.action_space)],p = prob/sum(prob))
@@ -82,8 +90,8 @@ def test(model = 1, episodes= 1000, times  = 1):
                 
                 
                 
-                #reward += Eagent.estimation(next_state) - Eagent.estimation(state)
-                # if cnt % 3 == 0 and sof > 0:
+                # reward += Eagent.estimation(next_state) - Eagent.estimation(state)
+                # if cnt % 10 == 0 and sof > 0:
                 #     sof -= 1
                 #     Eagent.learning(0, env.estimation(state),state,next_state)
                 #     Eagent.learning(0, env.estimation(next_state),next_state,next_state)
@@ -92,19 +100,18 @@ def test(model = 1, episodes= 1000, times  = 1):
                             
                 if cnt % 5 ==0 and sof > 0:
                     sof -= 1
-                    Qagent.learning(action, reward, state,next_state)
-                    # if action == env.perfect_action(state):
-                    #     Qagent.learning(action, reward + 10, state,next_state)
-                    # else:
-                    #     Qagent.learning(action, reward - 10, state,next_state)
+                    if  action == env.perfect_action(state):
+                        feedback = 1
+                    else:
+                        feedback = -1
                 #evaluation 
                 
-                # Qagent.learning(action,reward,state,next_state)
+                Qagent.learning(action,reward,state,next_state)
     
-                #if feedback !=0 and sof > 0:
+                if feedback !=0 and sof > 0:
                     #feedback_num -= 1
                     #print(action, feedback,state,next_state)
-                    
+                    Pagent.learning(action, feedback,state,next_state)
                 # F learning
                 
                 
@@ -119,8 +126,8 @@ def test(model = 1, episodes= 1000, times  = 1):
     return total_reward
         
         
-length = 200
-times = 10
+length = 500
+times = 1000
 M=[0 for i in range(length)]
 S=[0 for i in range(length)]
 N=[0 for i in range(length)]
@@ -149,7 +156,7 @@ plt.legend()
 
 
 res=M/times
-f = open('DQN+TAMER_1.txt', 'w')  
+f = open('PS_1.txt', 'w')  
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
@@ -157,21 +164,21 @@ f.close()
 
 
 res=S/times
-f = open('DQN+TAMER_5.txt', 'w')   
+f = open('PS_5.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
 f.close() 
 
 res=N/times
-f = open('DQN+TAMER_10.txt', 'w')   
+f = open('PS_10.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
 f.close() 
 
 res=R/times
-f = open('DQN+TAMER_100.txt', 'w')   
+f = open('PS_100.txt', 'w')    
 for r in res:  
     f.write(str(r))  
     f.write('\n')  
