@@ -188,7 +188,7 @@ class  Reaching():
         return curr_ee_pose.pose.position.z
     def get_obs(self):
 
-        acc = 4
+        acc = 2
         curr_ee_pose = rospy.wait_for_message('/j2s7s300_driver/out/tool_pose', PoseStamped)
         print("CURR POSE:", curr_ee_pose.pose)
         #curr_ee_pose = [curr_ee_pose.pose.position.x, curr_ee_pose.pose.position.y, curr_ee_pose.pose.position.z]
